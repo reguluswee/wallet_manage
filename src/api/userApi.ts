@@ -22,6 +22,15 @@ export interface UserListResponse {
 export interface UpdateUserRequest {
     id: number;
     name: string;
+    login_id: string;
+    email: string;
+    location: string;
+    dept_ids: number[];
+}
+
+export interface CreateUserRequest {
+    name: string;
+    login_id: string;
     email: string;
     location: string;
     dept_ids: number[];
@@ -46,6 +55,13 @@ export const fetchUsers = async (): Promise<User[]> => {
         }
         return { ...user, departments };
     });
+};
+
+/**
+ * Create new user
+ */
+export const createUser = async (data: CreateUserRequest): Promise<void> => {
+    await api.post<ApiResponse>('/portal/user/add', data);
 };
 
 /**

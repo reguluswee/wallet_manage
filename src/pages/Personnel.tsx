@@ -14,7 +14,7 @@ import {
     X,
     Check
 } from 'lucide-react';
-import { fetchUsers, updateUser, type User } from '../api/userApi';
+import { fetchUsers, updateUser, createUser, type User } from '../api/userApi';
 import { fetchDepartments, type Department } from '../api/departmentApi';
 
 const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
@@ -25,6 +25,7 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
     onSubmit: (data: any) => Promise<void>;
 }) => {
     const [name, setName] = useState('');
+    const [loginId, setLoginId] = useState('');
     const [email, setEmail] = useState('');
     const [location, setLocation] = useState('');
     const [selectedDeptIds, setSelectedDeptIds] = useState<number[]>([]);
@@ -34,11 +35,13 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
     useEffect(() => {
         if (user) {
             setName(user.name);
+            setLoginId(user.login_id || '');
             setEmail(user.email);
             setLocation(user.location || '');
             setSelectedDeptIds(user.departments?.map(d => d.id) || []);
         } else {
             setName('');
+            setLoginId('');
             setEmail('');
             setLocation('');
             setSelectedDeptIds([]);
@@ -48,22 +51,35 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user) return;
 
         try {
             setIsSubmitting(true);
             setError(null);
-            await onSubmit({
-                id: user.id,
-                name,
-                email,
-                location,
-                dept_ids: selectedDeptIds
-            });
+
+            if (user) {
+                // Update existing user
+                await onSubmit({
+                    id: user.id,
+                    name,
+                    login_id: loginId,
+                    email,
+                    location,
+                    dept_ids: selectedDeptIds
+                });
+            } else {
+                // Create new user
+                await onSubmit({
+                    name,
+                    login_id: loginId,
+                    email,
+                    location,
+                    dept_ids: selectedDeptIds
+                });
+            }
             onClose();
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'Failed to update profile');
+            setError(err.message || 'Failed to save user');
         } finally {
             setIsSubmitting(false);
         }
@@ -115,6 +131,17 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
                         </div>
 
                         <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Login ID</label>
+                            <input
+                                type="text"
+                                value={loginId}
+                                onChange={e => setLoginId(e.target.value)}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
+                                required
+                            />
+                        </div>
+
+                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                             <input
                                 type="email"
@@ -143,13 +170,13 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
                                         key={dept.id}
                                         onClick={() => toggleDept(dept.id)}
                                         className={`flex items-center p-2 rounded-lg cursor-pointer transition-colors ${selectedDeptIds.includes(dept.id)
-                                                ? 'bg-primary-50 text-primary-700'
-                                                : 'hover:bg-gray-50 text-gray-700'
+                                            ? 'bg-primary-50 text-primary-700'
+                                            : 'hover:bg-gray-50 text-gray-700'
                                             }`}
                                     >
                                         <div className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${selectedDeptIds.includes(dept.id)
-                                                ? 'bg-primary-500 border-primary-500 text-white'
-                                                : 'border-gray-300'
+                                            ? 'bg-primary-500 border-primary-500 text-white'
+                                            : 'border-gray-300'
                                             }`}>
                                             {selectedDeptIds.includes(dept.id) && <Check className="h-3 w-3" />}
                                         </div>
@@ -268,8 +295,14 @@ export const Personnel: React.FC = () => {
         loadData();
     }, []);
 
-    const handleUpdateUser = async (data: any) => {
-        await updateUser(data);
+    const handleSaveUser = async (data: any) => {
+        if (data.id) {
+            // Update existing user
+            await updateUser(data);
+        } else {
+            // Create new user
+            await createUser(data);
+        }
         await loadData(); // Refresh list
     };
 
@@ -297,7 +330,13 @@ export const Personnel: React.FC = () => {
                     <h2 className="text-2xl font-bold text-gray-900">Personnel</h2>
                     <p className="mt-1 text-sm text-gray-500">Manage your team members and roles.</p>
                 </div>
-                <button className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/30 text-sm font-medium">
+                <button
+                    onClick={() => {
+                        setSelectedUser(null);
+                        setIsModalOpen(true);
+                    }}
+                    className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/30 text-sm font-medium"
+                >
                     <Plus className="h-5 w-5 mr-2" />
                     Add Employee
                 </button>
@@ -347,7 +386,7 @@ export const Personnel: React.FC = () => {
                 }}
                 user={selectedUser}
                 allDepartments={departments}
-                onSubmit={handleUpdateUser}
+                onSubmit={handleSaveUser}
             />
         </div>
     );

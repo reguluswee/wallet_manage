@@ -27,11 +27,11 @@ export interface FuncListResponse {
 }
 
 export interface RoleFuncListResponse {
-    role_funcs: BackendFunc[];
+    portal_funcs: BackendFunc[];  // Backend returns portal_funcs, not role_funcs
 }
 
 export interface RoleUserListResponse {
-    role_users: any[];
+    portal_users: any[];  // Backend returns portal_users
 }
 
 // Fetch all available functions
@@ -52,7 +52,7 @@ export const fetchFunctions = async (): Promise<Func[]> => {
 // Fetch functions assigned to a specific role
 export const fetchRoleFunctions = async (roleId: number): Promise<Func[]> => {
     const response = await api.get<ApiResponse<RoleFuncListResponse>>(`/portal/rbac/role/func/list/${roleId}`);
-    const backendFuncs = response.data.data?.role_funcs || [];
+    const backendFuncs = response.data.data?.portal_funcs || [];
 
     // Transform to frontend structure
     return backendFuncs.map(func => ({
@@ -67,7 +67,7 @@ export const fetchRoleFunctions = async (roleId: number): Promise<Func[]> => {
 // Fetch users assigned to a specific role
 export const fetchRoleUsers = async (roleId: number): Promise<any[]> => {
     const response = await api.get<ApiResponse<RoleUserListResponse>>(`/portal/rbac/role/user/list/${roleId}`);
-    return response.data.data?.role_users || [];
+    return response.data.data?.portal_users || [];
 };
 
 // Bind function to role

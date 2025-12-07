@@ -131,6 +131,11 @@ const Roles = () => {
                 fetchFunctions(),
                 fetchRoleFunctions(role.id)
             ]);
+
+            console.log('All functions:', all);
+            console.log('Assigned functions for role', role.id, ':', assigned);
+            console.log('Assigned IDs:', assigned.map(f => f.id));
+
             setAllFuncs(all);
             setRoleFuncs(assigned);
         } catch (err: any) {
@@ -418,6 +423,17 @@ const Roles = () => {
                                 <div className="space-y-2 max-h-96 overflow-y-auto">
                                     {allFuncs.map((func) => {
                                         const isAssigned = roleFuncs.some(f => f.id === func.id);
+
+                                        // Debug log for first few items
+                                        if (func.id <= 3) {
+                                            console.log(`Func ${func.id} (${func.func_name}):`, {
+                                                funcId: func.id,
+                                                funcIdType: typeof func.id,
+                                                isAssigned,
+                                                roleFuncsIds: roleFuncs.map(f => ({ id: f.id, type: typeof f.id }))
+                                            });
+                                        }
+
                                         return (
                                             <div
                                                 key={func.id}
