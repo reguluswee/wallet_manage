@@ -6,7 +6,12 @@ import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { Departments } from './pages/Departments';
 import { Personnel } from './pages/Personnel';
-import { Payroll } from './pages/Payroll';
+import Payroll from './pages/Payroll';
+import TenantManagement from './pages/TenantManagement';
+import Payslips from './pages/Payslips';
+import Roles from './pages/Roles';
+import Settings from './pages/Settings';
+import { ToastProvider } from './contexts/ToastContext';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -20,22 +25,28 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
+    <ToastProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        <Route path="/" element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="departments" element={<Departments />} />
-          <Route path="personnel" element={<Personnel />} />
-          <Route path="payroll" element={<Payroll />} />
-        </Route>
-      </Routes>
-    </Router>
+          <Route path="/" element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="departments" element={<Departments />} />
+            <Route path="personnel" element={<Personnel />} />
+            <Route path="roles" element={<Roles />} />
+            <Route path="payroll" element={<Payroll />} />
+            <Route path="payslips" element={<Payslips />} />
+            <Route path="tenants" element={<TenantManagement />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+        </Routes>
+      </Router>
+    </ToastProvider>
   );
 }
 

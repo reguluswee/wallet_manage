@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import {
-    LayoutDashboard,
-    Users,
-    Building2,
-    Banknote,
     Menu,
     X,
     LogOut,
     ChevronRight,
     Bell,
-    Search
+    Search,
+    Loader2
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { fetchUserMenus, groupMenus, type MenuGroup } from '../api/menuApi';
+import { getIcon } from '../utils/iconMap';
 
 export const MainLayout: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [menuGroups, setMenuGroups] = useState<MenuGroup[]>([]);
+    const [loadingMenus, setLoadingMenus] = useState(true);
     const { user, logout } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
@@ -27,14 +28,29 @@ export const MainLayout: React.FC = () => {
         navigate('/login');
     };
 
-    const navigation = [
-        { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-        { name: 'Departments', href: '/departments', icon: Building2 },
-        { name: 'Personnel', href: '/personnel', icon: Users },
-        { name: 'Payroll', href: '/payroll', icon: Banknote },
-    ];
+    // Load dynamic menus
+    useEffect(() => {
+        const loadMenus = async () => {
+            try {
+                setLoadingMenus(true);
+                const menus = await fetchUserMenus();
+                const grouped = groupMenus(menus);
+                setMenuGroups(grouped);
+            } catch (error) {
+                console.error('Failed to load menus:', error);
+                // Fallback to empty menus
+                setMenuGroups([]);
+            } finally {
+                setLoadingMenus(false);
+            }
+        };
+        loadMenus();
+    }, []);
 
-    const pageTitle = navigation.find(item => item.href === location.pathname)?.name || 'Dashboard';
+    // Flatten all menu items for page title lookup
+    const allMenuItems = menuGroups.flatMap(group => group.items);
+    const currentPage = allMenuItems.find(item => item.func_path === location.pathname);
+    const pageTitle = currentPage?.func_name || 'Dashboard';
 
     return (
         <div className="min-h-screen bg-gray-50 flex">
@@ -74,35 +90,52 @@ export const MainLayout: React.FC = () => {
 
                 {/* Navigation */}
                 <div className="flex-1 flex flex-col overflow-y-auto py-6 px-4">
-                    <nav className="space-y-1">
-                        {navigation.map((item) => (
-                            <NavLink
-                                key={item.name}
-                                to={item.href}
-                                onClick={() => setIsSidebarOpen(false)}
-                                className={({ isActive }) => clsx(
-                                    isActive
-                                        ? 'bg-primary-50 text-primary-700 shadow-sm ring-1 ring-primary-200'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                                    'group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out'
-                                )}
-                            >
-                                <item.icon
-                                    className={clsx(
-                                        'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200',
-                                        'text-gray-400 group-hover:text-gray-500',
-                                        // eslint-disable-next-line react/prop-types
-                                        (item.href === location.pathname) && 'text-primary-600'
-                                    )}
-                                    aria-hidden="true"
-                                />
-                                {item.name}
-                                {item.href === location.pathname && (
-                                    <ChevronRight className="ml-auto h-4 w-4 text-primary-400" />
-                                )}
-                            </NavLink>
-                        ))}
-                    </nav>
+                    {loadingMenus ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
+                        </div>
+                    ) : (
+                        <nav className="space-y-6">
+                            {menuGroups.map((group) => (
+                                <div key={group.name}>
+                                    <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                                        {group.name}
+                                    </h3>
+                                    <div className="space-y-1">
+                                        {group.items.map((item) => {
+                                            const IconComponent = getIcon(item.func_icon);
+                                            return (
+                                                <NavLink
+                                                    key={item.func_id}
+                                                    to={item.func_path}
+                                                    onClick={() => setIsSidebarOpen(false)}
+                                                    className={({ isActive }) => clsx(
+                                                        isActive
+                                                            ? 'bg-primary-50 text-primary-700 shadow-sm ring-1 ring-primary-200'
+                                                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                                                        'group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out'
+                                                    )}
+                                                >
+                                                    <IconComponent
+                                                        className={clsx(
+                                                            'mr-3 h-5 w-5 flex-shrink-0 transition-colors duration-200',
+                                                            'text-gray-400 group-hover:text-gray-500',
+                                                            (item.func_path === location.pathname) && 'text-primary-600'
+                                                        )}
+                                                        aria-hidden="true"
+                                                    />
+                                                    {item.func_name}
+                                                    {item.func_path === location.pathname && (
+                                                        <ChevronRight className="ml-auto h-4 w-4 text-primary-400" />
+                                                    )}
+                                                </NavLink>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </nav>
+                    )}
                 </div>
 
                 {/* User Profile */}

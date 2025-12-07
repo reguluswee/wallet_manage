@@ -1,114 +1,317 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     Banknote,
-    Calendar,
+    Plus,
+    Edit2,
+    Trash2,
+    X,
+    AlertCircle,
+    Loader2,
+    Send,
     CheckCircle,
-    Clock,
-    MoreVertical,
-    Download,
-    Filter,
-    Search
+    XCircle,
+    DollarSign,
+    Eye
 } from 'lucide-react';
+import { fetchPayrolls, createPayroll, updatePayroll, deletePayroll, submitPayroll, auditPayroll, payPayroll, fetchPayrollDetail, type Payroll, type CreatePayrollRequest, type UpdatePayrollRequest, type PayrollDetailResponse } from '../api/payrollApi';
+import { useToast } from '../contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
 
-const PayrollCard = ({ employee, amount, date, status, type, delay }: any) => (
-    <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay }}
-        className="bg-white rounded-2xl p-6 shadow-soft hover:shadow-card-hover transition-all duration-300 border border-gray-100 group"
-    >
-        <div className="flex justify-between items-start mb-4">
-            <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-50 text-green-600">
-                    <Banknote className="h-6 w-6" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-bold text-gray-900">{amount}</h3>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">{type}</p>
-                </div>
-            </div>
-            <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-50">
-                <MoreVertical className="h-5 w-5" />
-            </button>
-        </div>
+const PayrollPage = () => {
+    const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
+    const [auditStatus, setAuditStatus] = useState<'02' | '03'>('02');
+    const [auditReason, setAuditReason] = useState('');
+    const [formData, setFormData] = useState<CreatePayrollRequest>({
+        payroll_name: '',
+        payroll_desc: '',
+        pay_time: ''
+    });
 
-        <div className="space-y-3 mb-4">
-            <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Employee</span>
-                <span className="font-medium text-gray-900">{employee}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Date</span>
-                <span className="font-medium text-gray-900">{date}</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Status</span>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                    {status === 'Paid' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
-                    {status}
-                </span>
-            </div>
-        </div>
+    const toast = useToast();
+    const navigate = useNavigate();
 
-        <div className="pt-4 border-t border-gray-50">
-            <button className="w-full flex items-center justify-center py-2 text-sm font-medium text-primary-600 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors">
-                <Download className="h-4 w-4 mr-2" />
-                Download Slip
-            </button>
-        </div>
-    </motion.div>
-);
+    useEffect(() => {
+        loadPayrolls();
+    }, []);
 
-export const Payroll: React.FC = () => {
-    const payrolls = [
-        { employee: 'Alex Johnson', amount: '$4,500.00', date: 'Oct 25, 2023', status: 'Paid', type: 'Salary' },
-        { employee: 'Sarah Wilson', amount: '$3,800.00', date: 'Oct 25, 2023', status: 'Paid', type: 'Salary' },
-        { employee: 'Mike Brown', amount: '$4,200.00', date: 'Oct 25, 2023', status: 'Pending', type: 'Salary' },
-        { employee: 'Emily Davis', amount: '$1,200.00', date: 'Oct 28, 2023', status: 'Pending', type: 'Bonus' },
-        { employee: 'Robert Taylor', amount: '$3,900.00', date: 'Oct 25, 2023', status: 'Paid', type: 'Salary' },
-        { employee: 'Jessica Miller', amount: '$5,100.00', date: 'Oct 25, 2023', status: 'Paid', type: 'Commission' },
-    ];
+    const loadPayrolls = async () => {
+        try {
+            setLoading(true);
+            const data = await fetchPayrolls();
+            setPayrolls(data);
+        } catch (err: any) {
+            toast.error(err.response?.data?.msg || 'Failed to load payrolls');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCreate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await createPayroll(formData);
+            toast.success('Payroll created successfully');
+            setIsCreateModalOpen(false);
+            setFormData({ payroll_name: '', payroll_desc: '', pay_time: '' });
+            loadPayrolls();
+        } catch (err: any) {
+            toast.error(err.response?.data?.msg || 'Failed to create payroll');
+        }
+    };
+
+    const handleSubmit = async (payroll: Payroll) => {
+        try {
+            await submitPayroll(payroll.id);
+            toast.success('Payroll submitted for audit');
+            loadPayrolls();
+        } catch (err: any) {
+            toast.error(err.response?.data?.msg || 'Failed to submit payroll');
+        }
+    };
+
+    const handleAudit = async () => {
+        if (!selectedPayroll) return;
+        try {
+            await auditPayroll({
+                payroll_id: selectedPayroll.id,
+                status: auditStatus,
+                reason: auditReason
+            });
+            toast.success(auditStatus === '02' ? 'Payroll approved' : 'Payroll rejected');
+            setIsAuditModalOpen(false);
+            setSelectedPayroll(null);
+            setAuditReason('');
+            loadPayrolls();
+        } catch (err: any) {
+            toast.error(err.response?.data?.msg || 'Failed to audit payroll');
+        }
+    };
+
+    const handlePay = async (payroll: Payroll) => {
+        if (!confirm('Are you sure you want to process payment for this payroll?')) return;
+        try {
+            await payPayroll(payroll.id);
+            toast.success('Payment initiated successfully');
+            loadPayrolls();
+        } catch (err: any) {
+            toast.error(err.response?.data?.msg || 'Failed to process payment');
+        }
+    };
+
+    const openAuditModal = (payroll: Payroll) => {
+        setSelectedPayroll(payroll);
+        setAuditStatus('02');
+        setAuditReason('');
+        setIsAuditModalOpen(true);
+    };
+
+    const getStatusBadge = (status: string) => {
+        const configs: Record<string, { bg: string; text: string; label: string }> = {
+            '00': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Draft' },
+            '01': { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Submitted' },
+            '02': { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved' },
+            '03': { bg: 'bg-red-100', text: 'text-red-700', label: 'Rejected' },
+            '04': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Paid' }
+        };
+        const config = configs[status] || configs['00'];
+        return (
+            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${config.bg} ${config.text}`}>
+                {config.label}
+            </span>
+        );
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Payroll</h2>
-                    <p className="mt-1 text-sm text-gray-500">Manage salaries and payments.</p>
+                    <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
+                    <p className="text-gray-500 mt-1">Create, submit, and manage employee payrolls</p>
                 </div>
-                <button className="flex items-center justify-center px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors shadow-lg shadow-primary-600/30 text-sm font-medium">
-                    <Banknote className="h-5 w-5 mr-2" />
-                    Run Payroll
+                <button
+                    onClick={() => setIsCreateModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                    <Plus className="h-5 w-5" />
+                    Create Payroll
                 </button>
             </div>
 
-            {/* Filters and Search */}
-            <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-2xl shadow-soft border border-gray-100">
-                <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search payroll records..."
-                        className="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                    />
-                </div>
-                <button className="flex items-center px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
-                    <Filter className="h-5 w-5 mr-2" />
-                    Filters
-                </button>
-                <button className="flex items-center px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-colors">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Oct 2023
-                </button>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                        <tr>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Pay Time</th>
+                            <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                        {payrolls.map((payroll) => (
+                            <motion.tr key={payroll.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-gray-50">
+                                <td className="px-6 py-4">
+                                    <div>
+                                        <p className="text-sm font-medium text-gray-900">{payroll.payroll_name}</p>
+                                        <p className="text-xs text-gray-500">{payroll.payroll_desc}</p>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-1">
+                                        <DollarSign className="h-4 w-4 text-gray-400" />
+                                        <span className="text-sm font-medium">{payroll.total_amount}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">{getStatusBadge(payroll.status)}</td>
+                                <td className="px-6 py-4 text-sm text-gray-600">{payroll.pay_time}</td>
+                                <td className="px-6 py-4  text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                        {payroll.status === '00' && (
+                                            <button
+                                                onClick={() => handleSubmit(payroll)}
+                                                className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                                                title="Submit for Audit"
+                                            >
+                                                <Send className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                        {payroll.status === '01' && (
+                                            <button
+                                                onClick={() => openAuditModal(payroll)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                title="Audit"
+                                            >
+                                                <CheckCircle className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                        {payroll.status === '02' && (
+                                            <button
+                                                onClick={() => handlePay(payroll)}
+                                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg"
+                                                title="Pay"
+                                            >
+                                                <Banknote className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </td>
+                            </motion.tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {payrolls.map((payroll, index) => (
-                    <PayrollCard key={index} {...payroll} delay={index * 0.1} />
-                ))}
-            </div>
+            {/* Create Modal */}
+            {isCreateModalOpen && (
+                <div className="fixed inset-0 z-50">
+                    <div className="flex min-h-screen items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-gray-900/50" onClick={() => setIsCreateModalOpen(false)}></div>
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                            <h2 className="text-xl font-bold mb-4">Create Payroll</h2>
+                            <form onSubmit={handleCreate} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Name *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.payroll_name}
+                                        onChange={(e) => setFormData({ ...formData, payroll_name: e.target.value })}
+                                        className="w-full px-4 py-2 border rounded-lg"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Description</label>
+                                    <textarea
+                                        value={formData.payroll_desc}
+                                        onChange={(e) => setFormData({ ...formData, payroll_desc: e.target.value })}
+                                        className="w-full px-4 py-2 border rounded-lg"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-1">Pay Time *</label>
+                                    <input
+                                        type="datetime-local"
+                                        required
+                                        value={formData.pay_time}
+                                        onChange={(e) => setFormData({ ...formData, pay_time: e.target.value })}
+                                        className="w-full px-4 py-2 border rounded-lg"
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button type="button" onClick={() => setIsCreateModalOpen(false)} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                                    <button type="submit" className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg">Create</button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                </div>
+            )}
+
+            {/* Audit Modal */}
+            {isAuditModalOpen && selectedPayroll && (
+                <div className="fixed inset-0 z-50">
+                    <div className="flex min-h-screen items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-gray-900/50" onClick={() => setIsAuditModalOpen(false)}></div>
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                            <h2 className="text-xl font-bold mb-4">Audit Payroll - {selectedPayroll.payroll_name}</h2>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium mb-2">Decision</label>
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={() => setAuditStatus('02')}
+                                            className={`flex-1 px-4 py-2 rounded-lg border-2 transition ${auditStatus === '02' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}
+                                        >
+                                            <CheckCircle className="h-5 w-5 mx-auto mb-1" />
+                                            Approve
+                                        </button>
+                                        <button
+                                            onClick={() => setAuditStatus('03')}
+                                            className={`flex-1 px-4 py-2 rounded-lg border-2 transition ${auditStatus === '03' ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}
+                                        >
+                                            <XCircle className="h-5 w-5 mx-auto mb-1" />
+                                            Reject
+                                        </button>
+                                    </div>
+                                </div>
+                                {auditStatus === '03' && (
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Reason</label>
+                                        <textarea
+                                            value={auditReason}
+                                            onChange={(e) => setAuditReason(e.target.value)}
+                                            className="w-full px-4 py-2 border rounded-lg"
+                                            rows={3}
+                                            placeholder="Reason for rejection..."
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex gap-3 pt-4">
+                                    <button onClick={() => setIsAuditModalOpen(false)} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                                    <button onClick={handleAudit} className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg">Submit</button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
+export default PayrollPage;
