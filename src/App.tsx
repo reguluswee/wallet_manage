@@ -7,6 +7,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Departments } from './pages/Departments';
 import { Personnel } from './pages/Personnel';
 import Payroll from './pages/Payroll';
+import PayrollStaff from './pages/PayrollStaff';
 import TenantManagement from './pages/TenantManagement';
 import Payslips from './pages/Payslips';
 import Roles from './pages/Roles';
@@ -40,6 +41,7 @@ function App() {
             <Route path="personnel" element={<Personnel />} />
             <Route path="roles" element={<Roles />} />
             <Route path="payroll" element={<Payroll />} />
+            <Route path="payroll-staff" element={<PayrollStaff />} />
             <Route path="payslips" element={<Payslips />} />
             <Route path="tenants" element={<TenantManagement />} />
             <Route path="settings" element={<Settings />} />

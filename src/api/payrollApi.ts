@@ -4,17 +4,19 @@ import api, { type ApiResponse } from './client';
 
 export interface Payroll {
     id: number;
-    payroll_name: string;
-    payroll_desc: string;
-    pay_time: string;
-    status: string; // '00'=draft, '01'=submitted, '02'=approved, '03'=rejected, '04'=paid
+    roll_month: string;  // Backend uses roll_month, not payroll_name
+    flag: number;  // Backend uses flag for status: 0=draft, 1=submitted, 2=approved, 3=rejected, 4=paid
+    status: string;  // Status description from backend
+    creator_id: number;
     total_amount: string;
+    currency: string;
     add_time: string;
-    update_time: string;
+    desc: string;
+    pay_time: string;
 }
 
 export interface PayrollListResponse {
-    payrolls: Payroll[];
+    payroll_list: Payroll[];  // Backend returns payroll_list, not payrolls
 }
 
 export interface PayrollStaff {
@@ -32,16 +34,14 @@ export interface PayrollDetailResponse {
 }
 
 export interface CreatePayrollRequest {
-    payroll_name: string;
-    payroll_desc: string;
-    pay_time: string;
+    roll_month: string;  // Format: YYYY-MM
+    desc: string;
 }
 
 export interface UpdatePayrollRequest {
     id: number;
-    payroll_name: string;
-    payroll_desc: string;
-    pay_time: string;
+    roll_month: string;
+    desc: string;
 }
 
 export interface StaffItem {
@@ -59,15 +59,15 @@ export interface SetWalletRequest {
 }
 
 export interface AuditRequest {
-    payroll_id: number;
-    status: string; // '02'=approved, '03'=rejected
-    reason?: string;
+    id: number;  // Backend expects id, not payroll_id
+    flag: number;  // 2=approved, 3=rejected
+    desc?: string;  // reason
 }
 
 // Fetch all payrolls
 export const fetchPayrolls = async (): Promise<Payroll[]> => {
     const response = await api.get<ApiResponse<PayrollListResponse>>('/portal/payroll/list');
-    return response.data.data?.payrolls || [];
+    return response.data.data?.payroll_list || [];
 };
 
 // Fetch payroll detail
@@ -103,7 +103,7 @@ export const setUserWallet = async (userId: number, data: SetWalletRequest): Pro
 
 // Submit payroll for audit
 export const submitPayroll = async (id: number): Promise<void> => {
-    await api.post<ApiResponse>('/portal/payroll/submit', { id });
+    await api.post<ApiResponse>('/portal/payroll/submit', { id, flag: 1 });
 };
 
 // Audit payroll (approve/reject)

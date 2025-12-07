@@ -43,18 +43,6 @@ const getIconName = (permCode: string): string => {
     return 'LayoutDashboard';
 };
 
-// Map group name to display name
-const getGroupName = (group: string): string => {
-    const groupMap: Record<string, string> = {
-        'system': 'System',
-        'permission': 'HR Management',
-        'salary': 'Payroll',
-        'tenant': 'System',
-        'overview': 'Overview'
-    };
-    return groupMap[group.toLowerCase()] || 'Other';
-};
-
 // Map res_uri to route path
 const getRoutePath = (resUri: string): string => {
     // Remove /admin/portal prefix and map to frontend routes
@@ -63,7 +51,7 @@ const getRoutePath = (resUri: string): string => {
         '/admin/portal/user/list': '/personnel',
         '/admin/portal/rbac/role/list': '/roles',
         '/admin/portal/payroll/list': '/payroll',
-        '/admin/portal/payroll/staff/list': '/payroll',  // Same as payroll for now
+        '/admin/portal/payroll/staff/list': '/payroll-staff',  // Payroll Staff wallet management
         '/admin/portal/payslip/list': '/payslips',
         '/admin/portal/tenant/list': '/tenants',
         '/admin/portal/sys/payroll/settings': '/settings'
@@ -87,35 +75,38 @@ export const fetchUserMenus = async (): Promise<MenuItem[]> => {
             func_desc: func.perm_code,
             func_path: getRoutePath(func.res_uri),
             func_icon: getIconName(func.perm_code),
-            func_group: getGroupName(func.group),
+            func_group: func.group, // Use the group field directly
             func_order: index
         }));
 };
 
-// Group menus by func_group
-export const groupMenus = (menus: MenuItem[]): MenuGroup[] => {
-    const groups = new Map<string, MenuItem[]>();
+// Group menu items by category
+export const groupMenuItems = (items: MenuItem[]): MenuGroup[] => {
+    const groups: Record<string, MenuItem[]> = {};
 
-    menus.forEach(menu => {
-        const group = menu.func_group || 'Other';
-        if (!groups.has(group)) {
-            groups.set(group, []);
+    items.forEach(item => {
+        const groupKey = item.func_group || 'Other'; // Use func_group from MenuItem
+        if (!groups[groupKey]) {
+            groups[groupKey] = [];
         }
-        groups.get(group)!.push(menu);
+        groups[groupKey].push(item);
     });
 
     // Sort items within each group by func_order
-    groups.forEach((items) => {
-        items.sort((a, b) => a.func_order - b.func_order);
-    });
+    for (const groupKey in groups) {
+        groups[groupKey].sort((a, b) => a.func_order - b.func_order);
+    }
 
-    // Convert to array and sort groups
-    const groupOrder = ['Overview', 'HR Management', 'Payroll', 'System', 'Other'];
-    return Array.from(groups.entries())
-        .map(([name, items]) => ({ name, items }))
+    // Convert to MenuGroup array and sort groups
+    const groupOrder = ['overview', 'permission', 'salary', 'system', 'tenant', 'other']; // Use lowercase group keys for sorting
+    return Object.entries(groups)
+        .map(([groupKey, items]) => ({
+            name: groupKey.charAt(0).toUpperCase() + groupKey.slice(1), // Capitalize first letter for display
+            items
+        }))
         .sort((a, b) => {
-            const aIndex = groupOrder.indexOf(a.name);
-            const bIndex = groupOrder.indexOf(b.name);
+            const aIndex = groupOrder.indexOf(a.name.toLowerCase());
+            const bIndex = groupOrder.indexOf(b.name.toLowerCase());
             if (aIndex === -1 && bIndex === -1) return 0;
             if (aIndex === -1) return 1;
             if (bIndex === -1) return -1;

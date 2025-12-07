@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fetchUserMenus, groupMenus, type MenuGroup } from '../api/menuApi';
+import { fetchUserMenus, groupMenuItems, type MenuGroup } from '../api/menuApi';
 import { getIcon } from '../utils/iconMap';
 
 export const MainLayout: React.FC = () => {
@@ -34,7 +34,7 @@ export const MainLayout: React.FC = () => {
             try {
                 setLoadingMenus(true);
                 const menus = await fetchUserMenus();
-                const grouped = groupMenus(menus);
+                const grouped = groupMenuItems(menus);
                 setMenuGroups(grouped);
             } catch (error) {
                 console.error('Failed to load menus:', error);

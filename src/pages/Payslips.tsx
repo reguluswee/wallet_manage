@@ -91,7 +91,7 @@ const Payslips = () => {
                         <thead className="bg-gray-50">
                             <tr>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    Employee
+                                    Month
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Amount
@@ -103,7 +103,7 @@ const Payslips = () => {
                                     Pay Time
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    Created Time
+                                    Wallet Info
                                 </th>
                                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                     Actions
@@ -121,9 +121,9 @@ const Payslips = () => {
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 bg-blue-50 rounded-lg">
-                                                <User className="h-5 w-5 text-blue-600" />
+                                                <Calendar className="h-5 w-5 text-blue-600" />
                                             </div>
-                                            <span className="text-sm font-medium text-gray-900">{payslip.user_name}</span>
+                                            <span className="text-sm font-medium text-gray-900">{payslip.roll_month}</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -139,7 +139,17 @@ const Payslips = () => {
                                         <span className="text-sm text-gray-600">{formatDate(payslip.pay_time)}</span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="text-sm text-gray-500">{formatDate(payslip.add_time)}</span>
+                                        <div className="text-sm text-gray-900 font-mono">
+                                            {payslip.wallet_address ?
+                                                `${payslip.wallet_address.slice(0, 6)}...${payslip.wallet_address.slice(-4)}` :
+                                                '-'
+                                            }
+                                        </div>
+                                        {payslip.wallet_chain && (
+                                            <div className="text-xs text-gray-500">
+                                                {payslip.wallet_chain} • {payslip.wallet_type}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div className="flex items-center justify-end gap-2">
