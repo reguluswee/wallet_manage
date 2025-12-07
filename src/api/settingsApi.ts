@@ -92,5 +92,12 @@ export const fetchPayrollSettings = async (): Promise<PayrollSettingsResponse> =
 
 // Update payroll settings
 export const updatePayrollSettings = async (data: Partial<PayrollSettings>): Promise<void> => {
-    await api.post<ApiResponse>('/portal/sys/payroll/settings/update', data);
+    // Transform frontend field names to backend expected names
+    const requestData = {
+        chain: data.chain || '',
+        pay_contract: data.token_address || '',
+        pay_token: data.payment_token || ''
+    };
+
+    await api.post<ApiResponse>('/portal/sys/payroll/settings/save', requestData);
 };

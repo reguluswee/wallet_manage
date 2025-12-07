@@ -11,6 +11,7 @@ const Settings = () => {
     const [availableTokens, setAvailableTokens] = useState<Record<string, TokenOption[]>>({});
     const [selectedChain, setSelectedChain] = useState('');
     const [selectedToken, setSelectedToken] = useState('');
+    const [payrollContract, setPayrollContract] = useState('');
 
     const toast = useToast();
 
@@ -27,6 +28,7 @@ const Settings = () => {
             setAvailableTokens(data.available_tokens || {});
             setSelectedChain(data.settings.chain);
             setSelectedToken(data.settings.payment_token);
+            setPayrollContract(data.settings.token_address || '');
         } catch (err: any) {
             toast.error(err.response?.data?.msg || 'Failed to load settings');
         } finally {
@@ -39,7 +41,8 @@ const Settings = () => {
             setSaving(true);
             await updatePayrollSettings({
                 chain: selectedChain,
-                payment_token: selectedToken
+                payment_token: selectedToken,
+                token_address: payrollContract
             });
             toast.success('Settings saved successfully');
             loadSettings();
@@ -138,6 +141,23 @@ const Settings = () => {
                         </p>
                     </div>
 
+                    {/* Payroll Contract Address */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Payroll Contract Address <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={payrollContract}
+                            onChange={(e) => setPayrollContract(e.target.value)}
+                            placeholder="0x..."
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono text-sm"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                            Enter the smart contract address for payroll distribution
+                        </p>
+                    </div>
+
                     {/* Token Details Display */}
                     {tokenDetails && (
                         <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -161,7 +181,7 @@ const Settings = () => {
                     <div className="flex justify-end pt-4 border-t">
                         <button
                             onClick={handleSave}
-                            disabled={saving || !selectedChain || !selectedToken}
+                            disabled={saving || !selectedChain || !selectedToken || !payrollContract}
                             className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             {saving ? (
