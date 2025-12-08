@@ -19,18 +19,22 @@ export interface PayrollListResponse {
     payroll_list: Payroll[];  // Backend returns payroll_list, not payrolls
 }
 
-export interface PayrollStaff {
+export interface PayslipDetailItem {
     id: number;
     user_id: number;
     user_name: string;
+    user_email: string;
     amount: string;
+    wallet_id: number;
     wallet_address: string;
+    wallet_type: string;
+    wallet_chain: string;
     status: string;
 }
 
 export interface PayrollDetailResponse {
     payroll: Payroll;
-    staff_list: PayrollStaff[];
+    items: PayslipDetailItem[];
 }
 
 export interface CreatePayrollRequest {
@@ -40,6 +44,7 @@ export interface CreatePayrollRequest {
 
 export interface PayrollItem {
     user_id: number;
+    wallet_id: number;
     wallet_address: string;
     wallet_type: string;
     wallet_chain: string;

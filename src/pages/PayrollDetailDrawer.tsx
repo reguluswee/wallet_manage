@@ -51,12 +51,13 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                 const detail = await fetchPayrollDetail(payroll.id);
                 // Map backend response to PayrollItem if needed
                 // Assuming detail.staff_list is what we want
-                if (detail.staff_list && detail.staff_list.length > 0) {
-                    setItems(detail.staff_list.map(s => ({
+                if (detail.items && detail.items.length > 0) {
+                    setItems(detail.items.map(s => ({
                         user_id: s.user_id,
+                        wallet_id: s.wallet_id,
                         wallet_address: s.wallet_address,
-                        wallet_type: 'ERC20', // Default or from backend
-                        wallet_chain: 'Arbitrum', // Default or from backend
+                        wallet_type: s.wallet_type || 'ERC20',
+                        wallet_chain: s.wallet_chain || 'Arbitrum',
                         amount: s.amount
                     })));
                 } else {
@@ -83,6 +84,7 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
 
         const newItems: PayrollItem[] = staffList.map(staff => ({
             user_id: staff.id,
+            wallet_id: staff.wallet_id || 0,
             wallet_address: staff.wallet_address || '',
             wallet_type: staff.wallet_type || 'ERC20',
             wallet_chain: staff.wallet_chain || 'Arbitrum',
@@ -247,11 +249,16 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                                                     {getStaffEmail(item.user_id)}
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-1">
-                                                    <Wallet className="h-3 w-3 text-gray-400" />
-                                                    <span className="text-xs text-gray-500 font-mono">
+                                                    <Wallet className={`h-3 w-3 ${item.wallet_address ? 'text-gray-400' : 'text-red-400'}`} />
+                                                    <span className={`text-xs font-mono ${item.wallet_address ? 'text-gray-500' : 'text-red-500 font-medium'}`}>
                                                         {item.wallet_address ?
                                                             `${item.wallet_address.slice(0, 6)}...${item.wallet_address.slice(-4)}` :
-                                                            'No wallet set'}
+                                                            <span className="flex items-center gap-1">
+                                                                No wallet set
+                                                                <span className="text-gray-300 mx-1">|</span>
+                                                                <a href="/payroll-staff" className="text-blue-600 hover:underline">Set Wallet</a>
+                                                            </span>
+                                                        }
                                                     </span>
                                                 </div>
                                             </div>
@@ -262,16 +269,23 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                                                 </label>
                                                 <div className="relative">
                                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                        <DollarSign className="h-4 w-4 text-gray-400" />
+                                                        <DollarSign className={`h-4 w-4 ${item.wallet_address ? 'text-gray-400' : 'text-gray-300'}`} />
                                                     </div>
                                                     <input
                                                         type="number"
                                                         value={item.amount}
                                                         onChange={(e) => handleAmountChange(index, e.target.value)}
-                                                        className="block w-full pl-9 pr-3 py-2 text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                                        disabled={!item.wallet_address}
+                                                        className={`block w-full pl-9 pr-3 py-2 text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 ${!item.wallet_address ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''
+                                                            }`}
                                                         placeholder="0.00"
                                                     />
                                                 </div>
+                                                {!item.wallet_address && (
+                                                    <p className="text-[10px] text-red-500 mt-1">
+                                                        Wallet address required
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     ))}

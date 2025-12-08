@@ -5,6 +5,7 @@ export interface PayrollStaffMember {
     name: string;
     email: string;
     wallet_address: string;
+    wallet_id?: number;
     login_id: string;
     location?: string;
     wallet_chain?: string;
