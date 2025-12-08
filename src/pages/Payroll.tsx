@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { ConnectButton, useConnectModal } from '@rainbow-me/rainbowkit';
 import { useAccount, useWriteContract, useSwitchChain, useConfig } from 'wagmi';
-import { parseEther, parseUnits, erc20Abi } from 'viem';
+import { parseUnits, erc20Abi } from 'viem';
 import { waitForTransactionReceipt, readContract } from '@wagmi/core';
 import {
     fetchPayrolls,
@@ -180,7 +180,8 @@ const PayrollPage = () => {
                 'optimism': 10,
                 'arbitrum': 42161,
                 'base': 8453,
-                'sepolia': 11155111
+                'sepolia': 11155111,
+                'bsc_testnet': 97
             };
 
             // Try to parse as number first, if fails, look up in map

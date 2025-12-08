@@ -52,7 +52,8 @@ export const fetchPayrollSettings = async (): Promise<PayrollSettingsResponse> =
     const chainConfigs: Record<string, { name: string, chain_id: number }> = {
         'arbitrum': { name: 'Arbitrum', chain_id: 42161 },
         'ethereum': { name: 'Ethereum', chain_id: 1 },
-        'polygon': { name: 'Polygon', chain_id: 137 }
+        'polygon': { name: 'Polygon', chain_id: 137 },
+        'BSC_TESTNET': { name: 'BSC Testnet', chain_id: 97 }
     };
 
     // Process config_map

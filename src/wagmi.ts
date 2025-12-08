@@ -6,6 +6,7 @@ import {
     optimism,
     polygon,
     sepolia,
+    bscTestnet,
 } from 'wagmi/chains';
 
 export const config = getDefaultConfig({
@@ -17,6 +18,7 @@ export const config = getDefaultConfig({
         optimism,
         arbitrum,
         base,
+        bscTestnet,
         ...(import.meta.env.VITE_ENABLE_TESTNETS === 'true' ? [sepolia] : []),
     ],
 });
