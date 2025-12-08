@@ -171,3 +171,8 @@ export const payPayroll = async (id: number, txHash: string): Promise<void> => {
 export const deletePayslip = async (payslipId: number): Promise<void> => {
     await api.post<ApiResponse>(`/portal/payroll/staff/delete/${payslipId}`);
 };
+
+// Check payroll status
+export const checkPayrollStatus = async (id: number): Promise<void> => {
+    await api.get<ApiResponse>(`/portal/payroll/status/check/${id}`);
+};

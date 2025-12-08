@@ -20,6 +20,7 @@ import {
     submitPayroll,
     auditPayroll,
     payPayroll,
+    checkPayrollStatus,
     fetchPayConfig,
     type Payroll,
     type CreatePayrollRequest
@@ -102,7 +103,10 @@ const PayrollPage = () => {
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await createPayroll(formData);
+            await createPayroll({
+                ...formData,
+                roll_month: formData.roll_month.replace(/-/g, '')
+            });
             toast.success('Payroll created successfully');
             setIsCreateModalOpen(false);
             setFormData({ roll_month: '', desc: '' });
@@ -488,11 +492,28 @@ const PayrollPage = () => {
                                             </button>
                                         )}
 
-                                        {/* Rejected, Paid, or Paying: No action button */}
-                                        {(payroll.status === 'rejected' || payroll.status === 'paid' || payroll.status === 'paying' || payroll.flag === 3 || payroll.flag === 4) && (
+                                        {/* Paying: Show Check Status button */}
+                                        {(payroll.status === 'paying' || payroll.flag === 5) && (
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        await checkPayrollStatus(payroll.id);
+                                                        toast.success('Status check initiated. Please refresh shortly.');
+                                                    } catch (err: any) {
+                                                        toast.error(err.response?.data?.msg || 'Failed to check status');
+                                                    }
+                                                }}
+                                                className="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100"
+                                            >
+                                                <Loader2 className="h-4 w-4 mr-1" />
+                                                Check Status
+                                            </button>
+                                        )}
+
+                                        {/* Rejected or Paid: No action button */}
+                                        {(payroll.status === 'rejected' || payroll.status === 'paid' || payroll.flag === 3 || payroll.flag === 4) && (
                                             <span className="text-gray-400 text-xs italic">
-                                                {payroll.status === 'paid' || payroll.flag === 4 ? 'Completed' :
-                                                    payroll.status === 'paying' ? 'Processing...' : 'No actions available'}
+                                                {payroll.status === 'paid' || payroll.flag === 4 ? 'Completed' : 'No actions available'}
                                             </span>
                                         )}
                                     </td>
