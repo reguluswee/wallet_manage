@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { X, Save, Users, DollarSign, Wallet, Loader2 } from 'lucide-react';
+import { X, Save, Users, DollarSign, Wallet, Loader2, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../contexts/ToastContext';
 import {
     type Payroll,
     type PayrollItem,
     updatePayroll,
-    fetchPayrollDetail
+    fetchPayrollDetail,
+    deletePayslip
 } from '../api/payrollApi';
 import { fetchPayrollStaff, type PayrollStaffMember } from '../api/payrollStaffApi';
 
@@ -53,6 +54,7 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                 // Assuming detail.staff_list is what we want
                 if (detail.items && detail.items.length > 0) {
                     setItems(detail.items.map(s => ({
+                        id: s.id, // Map the payslip ID
                         user_id: s.user_id,
                         wallet_id: s.wallet_id,
                         wallet_address: s.wallet_address,
@@ -99,6 +101,46 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
         const newItems = [...items];
         newItems[index].amount = value;
         setItems(newItems);
+    };
+
+    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<number | null>(null);
+
+    const handleDeleteItem = (index: number) => {
+        const item = items[index];
+        // If item has an ID, it exists in backend and needs confirmation
+        if (item.id) {
+            setItemToDelete(index);
+            setIsDeleteConfirmOpen(true);
+        } else {
+            // Just remove from local state if not saved yet
+            const newItems = [...items];
+            newItems.splice(index, 1);
+            setItems(newItems);
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (itemToDelete === null) return;
+
+        const item = items[itemToDelete];
+        if (!item.id) return;
+
+        try {
+            await deletePayslip(item.id);
+            toast.success('Employee removed from payroll');
+            // Remove from local state immediately
+            const newItems = [...items];
+            newItems.splice(itemToDelete, 1);
+            setItems(newItems);
+            // Notify parent to refresh if needed
+            onUpdate();
+            setIsDeleteConfirmOpen(false);
+            setItemToDelete(null);
+        } catch (error: any) {
+            console.error('Failed to delete payslip:', error);
+            toast.error(error.response?.data?.msg || 'Failed to remove employee');
+        }
     };
 
     const handleSave = async () => {
@@ -287,6 +329,14 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                                                     </p>
                                                 )}
                                             </div>
+
+                                            <button
+                                                onClick={() => handleDeleteItem(index)}
+                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Remove from payroll"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
                                         </div>
                                     ))}
                                 </div>
@@ -294,6 +344,55 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                         </div>
                     </motion.div>
                 </>
+            )}
+            {/* Delete Confirmation Modal */}
+            {isDeleteConfirmOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-md"
+                    >
+                        <div className="p-6 border-b border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                    <Trash2 className="h-6 w-6 text-red-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900">Remove Employee</h3>
+                                    <p className="text-sm text-gray-500 mt-0.5">Remove from payroll</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6">
+                            <p className="text-gray-600">
+                                Are you sure you want to remove this employee from the payroll?
+                                <br />
+                                This action cannot be undone.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50/50">
+                            <button
+                                onClick={() => {
+                                    setIsDeleteConfirmOpen(false);
+                                    setItemToDelete(null);
+                                }}
+                                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmDelete}
+                                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Remove
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
             )}
         </AnimatePresence>
     );

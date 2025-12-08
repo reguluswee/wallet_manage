@@ -56,11 +56,12 @@ const PayrollPage = () => {
     const [payrolls, setPayrolls] = useState<Payroll[]>([]);
     const [loading, setLoading] = useState(true);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
     const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
     const [isConfirmPayModalOpen, setIsConfirmPayModalOpen] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
-    const [auditFlag, setAuditFlag] = useState<2 | 3>(2);
+    const [auditOp, setAuditOp] = useState<'approve' | 'reject'>('approve');
     const [auditReason, setAuditReason] = useState('');
     const [formData, setFormData] = useState<CreatePayrollRequest>({
         roll_month: '',
@@ -98,13 +99,22 @@ const PayrollPage = () => {
         }
     };
 
-    const handleSubmit = async (payroll: Payroll) => {
+    const handleSubmit = (payroll: Payroll) => {
+        setSelectedPayroll(payroll);
+        setIsSubmitModalOpen(true);
+    };
+
+    const handleConfirmSubmit = async () => {
+        if (!selectedPayroll) return;
         try {
-            await submitPayroll(payroll.id);
+            await submitPayroll(selectedPayroll.id);
             toast.success('Payroll submitted for audit');
+            setIsSubmitModalOpen(false);
+            setSelectedPayroll(null);
             loadPayrolls();
         } catch (err: any) {
-            toast.error(err.response?.data?.msg || 'Failed to submit payroll');
+            console.error('Submit error:', err);
+            toast.error(err.message || err.response?.data?.msg || 'Failed to submit payroll');
         }
     };
 
@@ -113,16 +123,17 @@ const PayrollPage = () => {
         try {
             await auditPayroll({
                 id: selectedPayroll.id,
-                flag: auditFlag,
+                op: auditOp,
                 desc: auditReason
             });
-            toast.success(auditFlag === 2 ? 'Payroll approved' : 'Payroll rejected');
+            toast.success(auditOp === 'approve' ? 'Payroll approved' : 'Payroll rejected');
             setIsAuditModalOpen(false);
             setSelectedPayroll(null);
             setAuditReason('');
             loadPayrolls();
         } catch (err: any) {
-            toast.error(err.response?.data?.msg || 'Failed to audit payroll');
+            console.error('Audit error:', err);
+            toast.error(err.message || err.response?.data?.msg || 'Failed to audit payroll');
         }
     };
 
@@ -135,7 +146,8 @@ const PayrollPage = () => {
             setSelectedPayroll(null);
             loadPayrolls();
         } catch (err: any) {
-            toast.error(err.response?.data?.msg || 'Failed to process payment');
+            console.error('Payment error:', err);
+            toast.error(err.message || err.response?.data?.msg || 'Failed to process payment');
         }
     };
 
@@ -335,6 +347,56 @@ const PayrollPage = () => {
                 </div>
             )}
 
+            {/* Submit Confirmation Modal */}
+            {isSubmitModalOpen && selectedPayroll && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white rounded-2xl shadow-xl w-full max-w-md"
+                    >
+                        <div className="p-6 border-b border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <Send className="h-6 w-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900">Submit Payroll</h3>
+                                    <p className="text-sm text-gray-500 mt-0.5">Submit for approval</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-6">
+                            <p className="text-gray-600">
+                                Are you sure you want to submit the payroll for <strong>{selectedPayroll.roll_month}</strong>?
+                                <br />
+                                Once submitted, it will be locked for editing until approved or rejected.
+                            </p>
+                        </div>
+
+                        <div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50/50">
+                            <button
+                                onClick={() => {
+                                    setIsSubmitModalOpen(false);
+                                    setSelectedPayroll(null);
+                                }}
+                                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirmSubmit}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                            >
+                                <Send className="h-4 w-4" />
+                                Confirm Submit
+                            </button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
+
             {/* Audit Modal */}
             {isAuditModalOpen && selectedPayroll && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
@@ -351,8 +413,8 @@ const PayrollPage = () => {
                         <div className="p-6 space-y-4">
                             <div className="flex gap-4">
                                 <button
-                                    onClick={() => setAuditFlag(2)}
-                                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${auditFlag === 2
+                                    onClick={() => setAuditOp('approve')}
+                                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${auditOp === 'approve'
                                         ? 'border-green-500 bg-green-50 text-green-700'
                                         : 'border-gray-200 text-gray-700 hover:border-gray-300'
                                         }`}
@@ -361,8 +423,8 @@ const PayrollPage = () => {
                                     Approve
                                 </button>
                                 <button
-                                    onClick={() => setAuditFlag(3)}
-                                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${auditFlag === 3
+                                    onClick={() => setAuditOp('reject')}
+                                    className={`flex-1 py-2 px-4 rounded-lg border-2 transition-colors ${auditOp === 'reject'
                                         ? 'border-red-500 bg-red-50 text-red-700'
                                         : 'border-gray-200 text-gray-700 hover:border-gray-300'
                                         }`}
@@ -374,15 +436,15 @@ const PayrollPage = () => {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    {auditFlag === 3 ? 'Reason for Rejection' : 'Comments (Optional)'}
+                                    {auditOp === 'reject' ? 'Reason for Rejection' : 'Comments (Optional)'}
                                 </label>
                                 <textarea
                                     value={auditReason}
                                     onChange={(e) => setAuditReason(e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                                     rows={3}
-                                    placeholder={auditFlag === 3 ? 'Please provide a reason...' : 'Optional comments...'}
-                                    required={auditFlag === 3}
+                                    placeholder={auditOp === 'reject' ? 'Please provide a reason...' : 'Optional comments...'}
+                                    required={auditOp === 'reject'}
                                 />
                             </div>
 
@@ -399,12 +461,12 @@ const PayrollPage = () => {
                                 </button>
                                 <button
                                     onClick={handleAudit}
-                                    className={`px-4 py-2 text-white rounded-lg ${auditFlag === 2
+                                    className={`px-4 py-2 text-white rounded-lg ${auditOp === 'approve'
                                         ? 'bg-green-600 hover:bg-green-700'
                                         : 'bg-red-600 hover:bg-red-700'
                                         }`}
                                 >
-                                    {auditFlag === 2 ? 'Approve' : 'Reject'}
+                                    {auditOp === 'approve' ? 'Approve' : 'Reject'}
                                 </button>
                             </div>
                         </div>

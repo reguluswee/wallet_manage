@@ -43,6 +43,7 @@ export interface CreatePayrollRequest {
 }
 
 export interface PayrollItem {
+    id?: number; // payslip_id
     user_id: number;
     wallet_id: number;
     wallet_address: string;
@@ -75,9 +76,9 @@ export interface SetWalletRequest {
 }
 
 export interface AuditRequest {
-    id: number;  // Backend expects id, not payroll_id
-    flag: number;  // 2=approved, 3=rejected
-    desc?: string;  // reason
+    id: number;
+    op: 'approve' | 'reject';
+    desc?: string;
 }
 
 // Fetch all payrolls
@@ -130,4 +131,9 @@ export const auditPayroll = async (data: AuditRequest): Promise<void> => {
 // Pay payroll
 export const payPayroll = async (id: number): Promise<void> => {
     await api.post<ApiResponse>('/portal/payroll/pay', { id });
+};
+
+// Delete payslip item
+export const deletePayslip = async (payslipId: number): Promise<void> => {
+    await api.post<ApiResponse>(`/portal/payroll/staff/delete/${payslipId}`);
 };
