@@ -39,9 +39,10 @@ const Settings = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
+            const tokenDetails = getSelectedTokenDetails();
             await updatePayrollSettings({
                 chain: selectedChain,
-                payment_token: selectedToken,
+                payment_token: tokenDetails?.address || selectedToken, // Send address if available, fallback to symbol
                 token_address: payrollContract
             });
             toast.success('Settings saved successfully');

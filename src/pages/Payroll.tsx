@@ -10,7 +10,20 @@ import {
     DollarSign,
     AlertCircle
 } from 'lucide-react';
-import { fetchPayrolls, createPayroll, submitPayroll, auditPayroll, payPayroll, type Payroll, type CreatePayrollRequest } from '../api/payrollApi';
+import { ConnectButton, useConnectModal } from '@rainbow-me/rainbowkit';
+import { useAccount, useWriteContract, useSwitchChain, useConfig } from 'wagmi';
+import { parseEther, parseUnits, erc20Abi } from 'viem';
+import { waitForTransactionReceipt, readContract } from '@wagmi/core';
+import {
+    fetchPayrolls,
+    createPayroll,
+    submitPayroll,
+    auditPayroll,
+    payPayroll,
+    fetchPayConfig,
+    type Payroll,
+    type CreatePayrollRequest
+} from '../api/payrollApi';
 import { useToast } from '../contexts/ToastContext';
 import PayrollDetailDrawer from './PayrollDetailDrawer';
 
@@ -137,11 +150,118 @@ const PayrollPage = () => {
         }
     };
 
+    const { isConnected, chainId, address } = useAccount();
+    const { switchChainAsync } = useSwitchChain();
+    const { writeContractAsync } = useWriteContract();
+    const { openConnectModal } = useConnectModal();
+    const wagmiConfig = useConfig();
+
     const handlePay = async () => {
         if (!selectedPayroll) return;
+
+        if (!isConnected || !address) {
+            if (openConnectModal) {
+                openConnectModal();
+            } else {
+                toast.error('Please connect your wallet first');
+            }
+            return;
+        }
+
         try {
-            await payPayroll(selectedPayroll.id);
-            toast.success('Payment initiated successfully');
+            // 1. Get payment config
+            const { payroll_settings: config } = await fetchPayConfig(selectedPayroll.id);
+
+            // 2. Check chain and switch if needed
+            const chainMap: Record<string, number> = {
+                'ethereum': 1,
+                'mainnet': 1,
+                'polygon': 137,
+                'optimism': 10,
+                'arbitrum': 42161,
+                'base': 8453,
+                'sepolia': 11155111
+            };
+
+            // Try to parse as number first, if fails, look up in map
+            let targetChainId = parseInt(config.chain);
+            if (isNaN(targetChainId)) {
+                targetChainId = chainMap[config.chain.toLowerCase()];
+            }
+
+            if (!targetChainId) {
+                toast.error(`Unsupported chain: ${config.chain}`);
+                return;
+            }
+
+            if (chainId !== targetChainId) {
+                try {
+                    await switchChainAsync({ chainId: targetChainId });
+                } catch (switchErr) {
+                    console.error('Failed to switch chain:', switchErr);
+                    toast.error('Failed to switch network. Please switch manually.');
+                    return;
+                }
+            }
+
+            const payTokenAddress = config.pay_token as `0x${string}`;
+            const payContractAddress = config.pay_contract as `0x${string}`;
+
+            // Fetch decimals
+            const decimals = await readContract(wagmiConfig, {
+                address: payTokenAddress,
+                abi: erc20Abi,
+                functionName: 'decimals',
+            }) as number;
+
+            const amount = parseUnits(selectedPayroll.total_amount, decimals);
+
+            // 3. Check Allowance
+            const allowance = await readContract(wagmiConfig, {
+                address: payTokenAddress,
+                abi: erc20Abi,
+                functionName: 'allowance',
+                args: [address, payContractAddress],
+            });
+
+            if (allowance < amount) {
+                toast.info(`Please approve ${selectedPayroll.total_amount} tokens...`);
+                const approveHash = await writeContractAsync({
+                    address: payTokenAddress,
+                    abi: erc20Abi,
+                    functionName: 'approve',
+                    args: [payContractAddress, amount],
+                });
+
+                toast.info('Waiting for approval confirmation...');
+                await waitForTransactionReceipt(wagmiConfig, { hash: approveHash });
+                toast.success('Approval confirmed!');
+            }
+
+            // 4. Call contract
+            // TODO: We need the real ABI and function name from the user
+            toast.info('Please confirm payment transaction...');
+            const txHash = await writeContractAsync({
+                address: payContractAddress,
+                abi: [{
+                    type: 'function',
+                    name: 'pay', // Placeholder
+                    inputs: [], // Placeholder
+                    outputs: [],
+                    stateMutability: 'payable'
+                }],
+                functionName: 'pay',
+                args: [], // Placeholder
+                // value: amount, // Only for native ETH, not for ERC20
+            });
+
+            toast.info('Transaction submitted. Waiting for confirmation...');
+            await waitForTransactionReceipt(wagmiConfig, { hash: txHash });
+
+            // 5. Notify backend
+            await payPayroll(selectedPayroll.id, txHash);
+
+            toast.success('Payment completed successfully');
             setIsConfirmPayModalOpen(false);
             setSelectedPayroll(null);
             loadPayrolls();
@@ -180,13 +300,16 @@ const PayrollPage = () => {
                     <h1 className="text-2xl font-bold text-gray-900">Payroll Management</h1>
                     <p className="text-gray-500 mt-1">Create, submit, and manage employee payrolls</p>
                 </div>
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                    <Plus className="h-5 w-5" />
-                    Create Payroll
-                </button>
+                <div className="flex items-center gap-3">
+                    <ConnectButton />
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                    >
+                        <Plus className="h-5 w-5" />
+                        Create Payroll
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100">

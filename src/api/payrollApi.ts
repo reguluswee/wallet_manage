@@ -128,9 +128,28 @@ export const auditPayroll = async (data: AuditRequest): Promise<void> => {
     await api.post<ApiResponse>('/portal/payroll/audit', data);
 };
 
+export interface PayrollSettings {
+    chain: string;
+    pay_contract: string;
+    pay_token: string;
+}
+
+export interface PayConfigResponse {
+    payroll_settings: PayrollSettings;
+    payroll_summary: Payroll;
+}
+
+// ... existing code ...
+
+// Get payroll payment configuration
+export const fetchPayConfig = async (id: number): Promise<PayConfigResponse> => {
+    const response = await api.post<ApiResponse<PayConfigResponse>>('/portal/payroll/pay/config', { id });
+    return response.data.data;
+};
+
 // Pay payroll
-export const payPayroll = async (id: number): Promise<void> => {
-    await api.post<ApiResponse>('/portal/payroll/pay', { id });
+export const payPayroll = async (id: number, txHash: string): Promise<void> => {
+    await api.post<ApiResponse>('/portal/payroll/pay', { id, tx_hash: txHash });
 };
 
 // Delete payslip item
