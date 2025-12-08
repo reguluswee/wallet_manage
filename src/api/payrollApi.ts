@@ -134,9 +134,24 @@ export interface PayrollSettings {
     pay_token: string;
 }
 
+export interface Payslip {
+    id: number;
+    payroll_id: number;
+    user_id: number;
+    wallet_id: number;
+    wallet_address: string;
+    wallet_type: string;
+    wallet_chain: string;
+    amount: string;
+    flag: number;
+    trans_time: string;
+    receipt_hash: string;
+}
+
 export interface PayConfigResponse {
     payroll_settings: PayrollSettings;
     payroll_summary: Payroll;
+    payslips: Payslip[];
 }
 
 // ... existing code ...

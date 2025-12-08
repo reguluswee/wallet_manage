@@ -156,6 +156,97 @@ const PayrollPage = () => {
     const { openConnectModal } = useConnectModal();
     const wagmiConfig = useConfig();
 
+    const PAYROLL_ABI = [
+        {
+            "inputs": [],
+            "name": "ReentrancyGuardReentrantCall",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                }
+            ],
+            "name": "SafeERC20FailedOperation",
+            "type": "error"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": true,
+                    "internalType": "uint256",
+                    "name": "transMonth",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": true,
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "count",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "totalAmount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "BatchTransferFrom",
+            "type": "event"
+        },
+        {
+            "inputs": [],
+            "name": "MAX_BATCH_SIZE",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "contract IERC20",
+                    "name": "token",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "transMonth",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address[]",
+                    "name": "recipients",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]"
+                }
+            ],
+            "name": "batchTransferFrom",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ] as const;
+
     const handlePay = async () => {
         if (!selectedPayroll) return;
 
@@ -169,8 +260,8 @@ const PayrollPage = () => {
         }
 
         try {
-            // 1. Get payment config
-            const { payroll_settings: config } = await fetchPayConfig(selectedPayroll.id);
+            // 1. Get payment config and payslips
+            const { payroll_settings: config, payslips } = await fetchPayConfig(selectedPayroll.id);
 
             // 2. Check chain and switch if needed
             const chainMap: Record<string, number> = {
@@ -240,20 +331,27 @@ const PayrollPage = () => {
             }
 
             // 4. Call contract
-            // TODO: We need the real ABI and function name from the user
+            // Prepare batch arguments
+            const safePayslips = payslips || [];
+            if (safePayslips.length === 0) {
+                toast.error('No payslips found for this payroll');
+                return;
+            }
+            const recipients = safePayslips.map(p => p.wallet_address as `0x${string}`);
+            const amounts = safePayslips.map(p => parseUnits(p.amount, decimals));
+            const transMonth = BigInt(selectedPayroll.roll_month.replace(/-/g, ''));
+
             toast.info('Please confirm payment transaction...');
             const txHash = await writeContractAsync({
                 address: payContractAddress,
-                abi: [{
-                    type: 'function',
-                    name: 'pay', // Placeholder
-                    inputs: [], // Placeholder
-                    outputs: [],
-                    stateMutability: 'payable'
-                }],
-                functionName: 'pay',
-                args: [], // Placeholder
-                // value: amount, // Only for native ETH, not for ERC20
+                abi: PAYROLL_ABI,
+                functionName: 'batchTransferFrom',
+                args: [
+                    payTokenAddress,
+                    transMonth,
+                    recipients,
+                    amounts
+                ],
             });
 
             toast.info('Transaction submitted. Waiting for confirmation...');
