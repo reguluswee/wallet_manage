@@ -10,8 +10,9 @@ import {
     DollarSign,
     AlertCircle
 } from 'lucide-react';
-import { fetchPayrolls, createPayroll, submitPayroll, auditPayroll, payPayroll, type Payroll, type CreatePayrollRequest, type AuditRequest } from '../api/payrollApi';
+import { fetchPayrolls, createPayroll, submitPayroll, auditPayroll, payPayroll, type Payroll, type CreatePayrollRequest } from '../api/payrollApi';
 import { useToast } from '../contexts/ToastContext';
+import PayrollDetailDrawer from './PayrollDetailDrawer';
 
 // Status helper functions
 const getStatusBadge = (flag: number, status?: string) => {
@@ -57,6 +58,7 @@ const PayrollPage = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
     const [isConfirmPayModalOpen, setIsConfirmPayModalOpen] = useState(false);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedPayroll, setSelectedPayroll] = useState<Payroll | null>(null);
     const [auditFlag, setAuditFlag] = useState<2 | 3>(2);
     const [auditReason, setAuditReason] = useState('');
@@ -137,6 +139,15 @@ const PayrollPage = () => {
         }
     };
 
+    const handleOpenDetail = (payroll: Payroll) => {
+        setSelectedPayroll(payroll);
+        setIsDrawerOpen(true);
+    };
+
+    const handleDrawerUpdate = () => {
+        loadPayrolls();
+    };
+
     const formatDate = (dateString: string) => {
         if (!dateString || dateString === '0001-01-01T00:00:00Z') return '-';
         return new Date(dateString).toLocaleString();
@@ -194,6 +205,16 @@ const PayrollPage = () => {
                                         {formatDate(payroll.pay_time)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                        {/* Draft/Create: Show Details button */}
+                                        {(payroll.status === 'create' || (!payroll.status && payroll.flag === 0)) && (
+                                            <button
+                                                onClick={() => handleOpenDetail(payroll)}
+                                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                            >
+                                                Details
+                                            </button>
+                                        )}
+
                                         {/* Draft/Create: Show Submit button */}
                                         {(payroll.status === 'create' || (!payroll.status && payroll.flag === 0)) && (
                                             <button
@@ -455,6 +476,13 @@ const PayrollPage = () => {
                     </motion.div>
                 </div>
             )}
+
+            <PayrollDetailDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                payroll={selectedPayroll}
+                onUpdate={handleDrawerUpdate}
+            />
         </div>
     );
 };

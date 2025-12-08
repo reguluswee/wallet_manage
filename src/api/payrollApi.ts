@@ -38,10 +38,21 @@ export interface CreatePayrollRequest {
     desc: string;
 }
 
+export interface PayrollItem {
+    user_id: number;
+    wallet_address: string;
+    wallet_type: string;
+    wallet_chain: string;
+    amount: string;
+}
+
 export interface UpdatePayrollRequest {
     id: number;
     roll_month: string;
     desc: string;
+    status: string;
+    total_amount: string;
+    items: PayrollItem[];
 }
 
 export interface StaffItem {
