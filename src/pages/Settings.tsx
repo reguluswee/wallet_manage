@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Loader2, Save } from 'lucide-react';
-import { fetchPayrollSettings, updatePayrollSettings, type PayrollSettings, type PayrollSettingsResponse, type ChainOption, type TokenOption } from '../api/settingsApi';
+import { fetchPayrollSettings, updatePayrollSettings, type PayrollSettingsResponse, type ChainOption, type TokenOption } from '../api/settingsApi';
 import { useToast } from '../contexts/ToastContext';
 
 const Settings = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [settings, setSettings] = useState<PayrollSettings | null>(null);
+    // settings state removed as it was unused
     const [availableChains, setAvailableChains] = useState<ChainOption[]>([]);
     const [availableTokens, setAvailableTokens] = useState<Record<string, TokenOption[]>>({});
     const [selectedChain, setSelectedChain] = useState('');
@@ -23,7 +23,7 @@ const Settings = () => {
         try {
             setLoading(true);
             const data: PayrollSettingsResponse = await fetchPayrollSettings();
-            setSettings(data.settings);
+            // Settings state update removed
             setAvailableChains(data.available_chains || []);
             setAvailableTokens(data.available_tokens || {});
             setSelectedChain(data.settings.chain);

@@ -395,7 +395,111 @@ const Roles = () => {
                 </div>
             )}
 
-            {/* Edit/Delete Modals - Similar to Create, omitted for brevity */}
+            {/* Edit Modal */}
+            {isEditModalOpen && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex min-h-screen items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={closeModals}></div>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-gray-900">Edit Role</h2>
+                                <button onClick={closeModals} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <X className="h-5 w-5 text-gray-500" />
+                                </button>
+                            </div>
+                            <form onSubmit={handleEdit} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Role Name <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        placeholder="Enter role name"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                    <textarea
+                                        value={formData.desc}
+                                        onChange={(e) => setFormData({ ...formData, desc: e.target.value })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                                        rows={3}
+                                        placeholder="Enter role description"
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={closeModals}
+                                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                                    >
+                                        Save Changes
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Modal */}
+            {isDeleteModalOpen && selectedRole && (
+                <div className="fixed inset-0 z-50 overflow-y-auto">
+                    <div className="flex min-h-screen items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={closeModals}></div>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="relative bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-gray-900">Delete Role</h2>
+                                <button onClick={closeModals} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <X className="h-5 w-5 text-gray-500" />
+                                </button>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="p-4 bg-red-50 text-red-900 rounded-lg flex gap-3">
+                                    <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
+                                    <p className="text-sm">
+                                        Are you sure you want to delete the role <span className="font-bold">{selectedRole.role_name}</span>?
+                                        This action cannot be undone.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={closeModals}
+                                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleDelete}
+                                        className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                                    >
+                                        Delete Role
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                </div>
+            )}
 
             {/* Function Assignment Modal */}
             {isFuncModalOpen && selectedRole && (

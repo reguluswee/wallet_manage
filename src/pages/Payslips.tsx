@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     FileText,
@@ -6,7 +6,7 @@ import {
     Eye,
     Calendar,
     DollarSign,
-    User,
+
     Loader2,
     AlertCircle
 } from 'lucide-react';
