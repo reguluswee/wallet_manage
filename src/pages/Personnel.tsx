@@ -12,10 +12,14 @@ import {
     Loader2,
     AlertCircle,
     X,
-    Check
+    Check,
+    Eye,
+    EyeOff,
+    Key
 } from 'lucide-react';
-import { fetchUsers, updateUser, createUser, type User } from '../api/userApi';
+import { fetchUsers, updateUser, createUser, resetPassword, type User } from '../api/userApi';
 import { fetchDepartments, type Department } from '../api/departmentApi';
+import SHA256 from 'crypto-js/sha256';
 
 const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
     isOpen: boolean;
@@ -27,6 +31,8 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
     const [name, setName] = useState('');
     const [loginId, setLoginId] = useState('');
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [location, setLocation] = useState('');
     const [selectedDeptIds, setSelectedDeptIds] = useState<number[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,12 +43,15 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
             setName(user.name);
             setLoginId(user.login_id || '');
             setEmail(user.email);
+            // Password is not populated for security and update flow ignores it
+            setPassword('');
             setLocation(user.location || '');
             setSelectedDeptIds(user.departments?.map(d => d.id) || []);
         } else {
             setName('');
             setLoginId('');
             setEmail('');
+            setPassword('');
             setLocation('');
             setSelectedDeptIds([]);
         }
@@ -73,7 +82,8 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
                     login_id: loginId,
                     email,
                     location,
-                    dept_ids: selectedDeptIds
+                    dept_ids: selectedDeptIds,
+                    password: SHA256(password).toString()
                 });
             }
             onClose();
@@ -152,6 +162,32 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
                             />
                         </div>
 
+                        {!user && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 pr-10"
+                                        required={!user}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-5 w-5" />
+                                        ) : (
+                                            <Eye className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
                             <input
@@ -209,15 +245,133 @@ const UserModal = ({ isOpen, onClose, user, allDepartments, onSubmit }: {
     );
 };
 
-const PersonCard = ({ name, departments, email, location, onViewProfile, delay }: any) => {
+const ResetPasswordModal = ({ isOpen, onClose, user, onSubmit }: {
+    isOpen: boolean;
+    onClose: () => void;
+    user: User | null;
+    onSubmit: (password: string) => Promise<void>;
+}) => {
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setPassword('');
+            setShowPassword(false);
+            setError(null);
+        }
+    }, [isOpen]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        // Check empty password
+        if (!password) {
+            setError('Password is required');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            setError(null);
+            await onSubmit(password);
+            onClose();
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || 'Failed to reset password');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen || !user) return null;
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+                >
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h3 className="text-xl font-bold text-gray-900">Reset Password</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        {error && (
+                            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center">
+                                <AlertCircle className="h-4 w-4 mr-2" />
+                                {error}
+                            </div>
+                        )}
+
+                        <div>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Enter a new password for <span className="font-bold text-gray-900">{user.name}</span>.
+                            </p>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={e => setPassword(e.target.value)}
+                                    className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 pr-10"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-5 w-5" />
+                                    ) : (
+                                        <Eye className="h-5 w-5" />
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="pt-2 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium disabled:opacity-50 flex items-center justify-center"
+                            >
+                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reset'}
+                            </button>
+                        </div>
+                    </form>
+                </motion.div>
+            </div>
+        </AnimatePresence>
+    );
+};
+
+const PersonCard = ({ name, departments, email, location, onViewProfile, onResetPassword, delay }: any) => {
     const deptString = departments?.map((d: any) => d.name).join(', ') || 'No Department';
+    const [showMenu, setShowMenu] = useState(false);
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay }}
-            className="bg-white rounded-2xl p-6 shadow-soft hover:shadow-card-hover transition-all duration-300 border border-gray-100 group"
+            className="bg-white rounded-2xl p-6 shadow-soft hover:shadow-card-hover transition-all duration-300 border border-gray-100 group relative"
+            onMouseLeave={() => setShowMenu(false)}
         >
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-4">
@@ -231,9 +385,35 @@ const PersonCard = ({ name, departments, email, location, onViewProfile, delay }
                         <p className="text-sm text-primary-600 font-medium">Employee</p>
                     </div>
                 </div>
-                <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-50">
-                    <MoreVertical className="h-5 w-5" />
-                </button>
+                <div className="relative">
+                    <button
+                        onClick={() => setShowMenu(!showMenu)}
+                        className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-50 transition-colors"
+                    >
+                        <MoreVertical className="h-5 w-5" />
+                    </button>
+                    <AnimatePresence>
+                        {showMenu && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-10"
+                            >
+                                <button
+                                    onClick={() => {
+                                        setShowMenu(false);
+                                        onResetPassword();
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center transition-colors"
+                                >
+                                    <Key className="h-4 w-4 mr-2 text-gray-400" />
+                                    Reset Password
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             <div className="space-y-2 mb-4">
@@ -273,6 +453,8 @@ export const Personnel: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+    const [userToReset, setUserToReset] = useState<User | null>(null);
 
     const loadData = async () => {
         try {
@@ -304,6 +486,17 @@ export const Personnel: React.FC = () => {
             await createUser(data);
         }
         await loadData(); // Refresh list
+    };
+
+    const handleResetPassword = async (password: string) => {
+        if (userToReset) {
+            await resetPassword({
+                id: userToReset.id,
+                password: SHA256(password).toString()
+            });
+            setIsResetPasswordModalOpen(false);
+            setUserToReset(null);
+        }
     };
 
     if (loading) {
@@ -373,6 +566,10 @@ export const Personnel: React.FC = () => {
                                 setSelectedUser(user);
                                 setIsModalOpen(true);
                             }}
+                            onResetPassword={() => {
+                                setUserToReset(user);
+                                setIsResetPasswordModalOpen(true);
+                            }}
                         />
                     ))}
                 </div>
@@ -387,6 +584,16 @@ export const Personnel: React.FC = () => {
                 user={selectedUser}
                 allDepartments={departments}
                 onSubmit={handleSaveUser}
+            />
+
+            <ResetPasswordModal
+                isOpen={isResetPasswordModalOpen}
+                onClose={() => {
+                    setIsResetPasswordModalOpen(false);
+                    setUserToReset(null);
+                }}
+                user={userToReset}
+                onSubmit={handleResetPassword}
             />
         </div>
     );

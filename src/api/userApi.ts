@@ -34,6 +34,7 @@ export interface CreateUserRequest {
     email: string;
     location: string;
     dept_ids: number[];
+    password?: string;
 }
 
 /**
@@ -69,4 +70,16 @@ export const createUser = async (data: CreateUserRequest): Promise<void> => {
  */
 export const updateUser = async (data: UpdateUserRequest): Promise<void> => {
     await api.post<ApiResponse>('/portal/user/update', data);
+};
+
+export interface ResetPasswordRequest {
+    id: number;
+    password: string;
+}
+
+/**
+ * Reset user password
+ */
+export const resetPassword = async (data: ResetPasswordRequest): Promise<void> => {
+    await api.post<ApiResponse>('/portal/user/password/reset', data);
 };
