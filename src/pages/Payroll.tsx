@@ -10,7 +10,7 @@ import {
     DollarSign,
     AlertCircle
 } from 'lucide-react';
-import { ConnectButton, useConnectModal } from '@rainbow-me/rainbowkit';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useWriteContract, useSwitchChain, useConfig } from 'wagmi';
 import { parseUnits, erc20Abi } from 'viem';
 import { waitForTransactionReceipt, readContract } from '@wagmi/core';
