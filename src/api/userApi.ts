@@ -77,9 +77,17 @@ export interface ResetPasswordRequest {
     password: string;
 }
 
+
 /**
  * Reset user password
  */
 export const resetPassword = async (data: ResetPasswordRequest): Promise<void> => {
     await api.post<ApiResponse>('/portal/user/password/reset', data);
+};
+
+/**
+ * Delete user
+ */
+export const deleteUser = async (id: number): Promise<void> => {
+    await api.post<ApiResponse>(`/portal/user/delete/${id}`);
 };

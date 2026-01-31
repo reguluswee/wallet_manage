@@ -11,13 +11,14 @@ import {
     MapPin,
     Loader2,
     AlertCircle,
+    Trash,
+    Key,
     X,
     Check,
     Eye,
-    EyeOff,
-    Key
+    EyeOff
 } from 'lucide-react';
-import { fetchUsers, updateUser, createUser, resetPassword, type User } from '../api/userApi';
+import { fetchUsers, updateUser, createUser, resetPassword, deleteUser, type User } from '../api/userApi';
 import { fetchDepartments, type Department } from '../api/departmentApi';
 import SHA256 from 'crypto-js/sha256';
 
@@ -361,7 +362,88 @@ const ResetPasswordModal = ({ isOpen, onClose, user, onSubmit }: {
     );
 };
 
-const PersonCard = ({ name, departments, email, location, onViewProfile, onResetPassword, delay }: any) => {
+const DeleteConfirmationModal = ({ isOpen, onClose, user, onConfirm }: {
+    isOpen: boolean;
+    onClose: () => void;
+    user: User | null;
+    onConfirm: () => Promise<void>;
+}) => {
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setError(null);
+        }
+    }, [isOpen]);
+
+    const handleConfirm = async () => {
+        try {
+            setIsSubmitting(true);
+            setError(null);
+            await onConfirm();
+            onClose();
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || 'Failed to delete user');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    if (!isOpen || !user) return null;
+
+    return (
+        <AnimatePresence>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden"
+                >
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                        <h3 className="text-xl font-bold text-gray-900">Delete User</h3>
+                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        {error && (
+                            <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg flex items-center">
+                                <AlertCircle className="h-4 w-4 mr-2" />
+                                {error}
+                            </div>
+                        )}
+
+                        <p className="text-gray-600">
+                            Are you sure you want to delete <span className="font-bold text-gray-900">{user.name}</span>? This action cannot be undone.
+                        </p>
+
+                        <div className="pt-4 flex gap-3">
+                            <button
+                                onClick={onClose}
+                                className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 font-medium"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleConfirm}
+                                disabled={isSubmitting}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium disabled:opacity-50 flex items-center justify-center"
+                            >
+                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        </AnimatePresence>
+    );
+};
+
+const PersonCard = ({ name, departments, email, location, onViewProfile, onResetPassword, onDelete, delay }: any) => {
     const deptString = departments?.map((d: any) => d.name).join(', ') || 'No Department';
     const [showMenu, setShowMenu] = useState(false);
 
@@ -410,6 +492,16 @@ const PersonCard = ({ name, departments, email, location, onViewProfile, onReset
                                     <Key className="h-4 w-4 mr-2 text-gray-400" />
                                     Reset Password
                                 </button>
+                                <button
+                                    onClick={() => {
+                                        setShowMenu(false);
+                                        onDelete();
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-gray-50 flex items-center transition-colors"
+                                >
+                                    <Trash className="h-4 w-4 mr-2" />
+                                    Delete User
+                                </button>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -454,7 +546,9 @@ export const Personnel: React.FC = () => {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [userToReset, setUserToReset] = useState<User | null>(null);
+    const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
     const loadData = async () => {
         try {
@@ -496,6 +590,15 @@ export const Personnel: React.FC = () => {
             });
             setIsResetPasswordModalOpen(false);
             setUserToReset(null);
+        }
+    };
+
+    const handleDeleteUser = async () => {
+        if (userToDelete) {
+            await deleteUser(userToDelete.id);
+            setIsDeleteModalOpen(false);
+            setUserToDelete(null);
+            await loadData();
         }
     };
 
@@ -570,6 +673,10 @@ export const Personnel: React.FC = () => {
                                 setUserToReset(user);
                                 setIsResetPasswordModalOpen(true);
                             }}
+                            onDelete={() => {
+                                setUserToDelete(user);
+                                setIsDeleteModalOpen(true);
+                            }}
                         />
                     ))}
                 </div>
@@ -594,6 +701,16 @@ export const Personnel: React.FC = () => {
                 }}
                 user={userToReset}
                 onSubmit={handleResetPassword}
+            />
+
+            <DeleteConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => {
+                    setIsDeleteModalOpen(false);
+                    setUserToDelete(null);
+                }}
+                user={userToDelete}
+                onConfirm={handleDeleteUser}
             />
         </div>
     );
