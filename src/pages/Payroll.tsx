@@ -154,10 +154,23 @@ const PayrollPage = () => {
         }
     };
 
+    const handleInitiatePay = async (payroll: Payroll) => {
+        try {
+            // Check permission by fetching config
+            await fetchPayConfig(payroll.id);
+            // If successful, open modal
+            setSelectedPayroll(payroll);
+            setIsConfirmPayModalOpen(true);
+        } catch (err: any) {
+            console.error('Permission check failed:', err);
+            toast.error(err.response?.data?.msg || 'You do not have permission to pay or failed to fetch config');
+        }
+    };
+
+
     const { isConnected, chainId, address } = useAccount();
     const { switchChainAsync } = useSwitchChain();
     const { writeContractAsync } = useWriteContract();
-    const { openConnectModal } = useConnectModal();
     const wagmiConfig = useConfig();
 
     const PAYROLL_ABI = [
@@ -255,11 +268,7 @@ const PayrollPage = () => {
         if (!selectedPayroll) return;
 
         if (!isConnected || !address) {
-            if (openConnectModal) {
-                openConnectModal();
-            } else {
-                toast.error('Please connect your wallet first');
-            }
+            toast.error('Please connect your wallet first');
             return;
         }
 
@@ -404,7 +413,6 @@ const PayrollPage = () => {
                     <p className="text-gray-500 mt-1">Create, submit, and manage employee payrolls</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <ConnectButton />
                     <button
                         onClick={() => setIsCreateModalOpen(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
@@ -481,10 +489,7 @@ const PayrollPage = () => {
                                         {/* Approved: Show Pay button */}
                                         {(payroll.status === 'approved' || payroll.flag === 2) && (
                                             <button
-                                                onClick={() => {
-                                                    setSelectedPayroll(payroll);
-                                                    setIsConfirmPayModalOpen(true);
-                                                }}
+                                                onClick={() => handleInitiatePay(payroll)}
                                                 className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
                                             >
                                                 <DollarSign className="h-4 w-4 mr-1" />
@@ -738,26 +743,37 @@ const PayrollPage = () => {
                         </div>
 
                         <div className="p-6">
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                                <div className="flex gap-3">
-                                    <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                                    <div className="text-sm text-yellow-800">
-                                        <p className="font-medium mb-1">Important</p>
-                                        <p>Are you sure you want to process payment for this payroll?</p>
+                            {!isConnected ? (
+                                <div className="text-center py-6">
+                                    <p className="text-gray-600 mb-4">Please connect your wallet to proceed with payment.</p>
+                                    <div className="flex justify-center">
+                                        <ConnectButton />
                                     </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                                        <div className="flex gap-3">
+                                            <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                                            <div className="text-sm text-yellow-800">
+                                                <p className="font-medium mb-1">Important</p>
+                                                <p>Are you sure you want to process payment for this payroll?</p>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                    <span className="text-gray-600">Month:</span>
-                                    <span className="font-medium text-gray-900">{selectedPayroll.roll_month}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b border-gray-100">
-                                    <span className="text-gray-600">Total Amount:</span>
-                                    <span className="font-medium text-gray-900">{selectedPayroll.total_amount} {selectedPayroll.currency}</span>
-                                </div>
-                            </div>
+                                    <div className="space-y-3 text-sm">
+                                        <div className="flex justify-between py-2 border-b border-gray-100">
+                                            <span className="text-gray-600">Month:</span>
+                                            <span className="font-medium text-gray-900">{selectedPayroll.roll_month}</span>
+                                        </div>
+                                        <div className="flex justify-between py-2 border-b border-gray-100">
+                                            <span className="text-gray-600">Total Amount:</span>
+                                            <span className="font-medium text-gray-900">{selectedPayroll.total_amount} {selectedPayroll.currency}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <div className="flex justify-end gap-3 p-6 border-t border-gray-100 bg-gray-50/50">
@@ -770,13 +786,15 @@ const PayrollPage = () => {
                             >
                                 Cancel
                             </button>
-                            <button
-                                onClick={handlePay}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-                            >
-                                <DollarSign className="h-4 w-4" />
-                                Confirm Payment
-                            </button>
+                            {isConnected && (
+                                <button
+                                    onClick={handlePay}
+                                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                                >
+                                    <DollarSign className="h-4 w-4" />
+                                    Confirm Payment
+                                </button>
+                            )}
                         </div>
                     </motion.div>
                 </div>
