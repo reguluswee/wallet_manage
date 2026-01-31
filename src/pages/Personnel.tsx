@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users,
     Mail,
-    Phone,
     MoreVertical,
     Plus,
     Search,
@@ -529,9 +528,6 @@ const PersonCard = ({ name, departments, email, location, onViewProfile, onReset
                     className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                     View Profile
-                </button>
-                <button className="p-2 text-gray-600 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                    <Phone className="h-4 w-4" />
                 </button>
             </div>
         </motion.div>
