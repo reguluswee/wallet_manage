@@ -25,6 +25,11 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
     const [staffList, setStaffList] = useState<PayrollStaffMember[]>([]);
     const toast = useToast();
 
+    // Determine authorization status
+    // Draft if status is 'create' OR (status is empty AND flag is 0)
+    const isDraft = payroll?.status === 'create' || (!payroll?.status && payroll?.flag === 0);
+    const isReadOnly = !isDraft;
+
     useEffect(() => {
         if (isOpen && payroll) {
             loadData();
@@ -222,13 +227,21 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
 
                         {/* Toolbar */}
                         <div className="px-6 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
-                            <button
-                                onClick={handleImportStaff}
-                                className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                            >
-                                <Users className="h-4 w-4 mr-2" />
-                                Import All Staff
-                            </button>
+                            {!isReadOnly ? (
+                                <button
+                                    onClick={handleImportStaff}
+                                    className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                >
+                                    <Users className="h-4 w-4 mr-2" />
+                                    Import All Staff
+                                </button>
+                            ) : (
+                                <div>
+                                    <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">
+                                        Read Only ({payroll?.status || 'Unknown Status'})
+                                    </span>
+                                </div>
+                            )}
 
                             <div className="flex items-center gap-4">
                                 <div className="text-sm text-gray-600">
@@ -236,18 +249,20 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                                         {items.reduce((sum, item) => sum + Number(item.amount || 0), 0).toLocaleString()}
                                     </span>
                                 </div>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
-                                >
-                                    {saving ? (
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    ) : (
-                                        <Save className="h-4 w-4 mr-2" />
-                                    )}
-                                    Save Changes
-                                </button>
+                                {!isReadOnly && (
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={saving}
+                                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                                    >
+                                        {saving ? (
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        ) : (
+                                            <Save className="h-4 w-4 mr-2" />
+                                        )}
+                                        Save Changes
+                                    </button>
+                                )}
                             </div>
                         </div>
 
@@ -261,12 +276,14 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                                 <div className="flex flex-col items-center justify-center h-64 text-gray-400 border-2 border-dashed border-gray-200 rounded-xl">
                                     <Users className="h-12 w-12 mb-3 opacity-50" />
                                     <p className="text-sm font-medium">No employees in this payroll</p>
-                                    <button
-                                        onClick={handleImportStaff}
-                                        className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
-                                    >
-                                        Import from Staff List
-                                    </button>
+                                    {!isReadOnly && (
+                                        <button
+                                            onClick={handleImportStaff}
+                                            className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                        >
+                                            Import from Staff List
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -317,8 +334,8 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                                                         type="number"
                                                         value={item.amount}
                                                         onChange={(e) => handleAmountChange(index, e.target.value)}
-                                                        disabled={!item.wallet_address}
-                                                        className={`block w-full pl-9 pr-3 py-2 text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 ${!item.wallet_address ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''
+                                                        disabled={!item.wallet_address || isReadOnly}
+                                                        className={`block w-full pl-9 pr-3 py-2 text-sm border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 ${!item.wallet_address || isReadOnly ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''
                                                             }`}
                                                         placeholder="0.00"
                                                     />
@@ -330,13 +347,15 @@ const PayrollDetailDrawer = ({ isOpen, onClose, payroll, onUpdate }: PayrollDeta
                                                 )}
                                             </div>
 
-                                            <button
-                                                onClick={() => handleDeleteItem(index)}
-                                                className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Remove from payroll"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            {!isReadOnly && (
+                                                <button
+                                                    onClick={() => handleDeleteItem(index)}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Remove from payroll"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

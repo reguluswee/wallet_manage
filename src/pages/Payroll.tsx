@@ -451,15 +451,13 @@ const PayrollPage = () => {
                                         {formatDate(payroll.pay_time)}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                                        {/* Draft/Create: Show Details button */}
-                                        {(payroll.status === 'create' || (!payroll.status && payroll.flag === 0)) && (
-                                            <button
-                                                onClick={() => handleOpenDetail(payroll)}
-                                                className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                                            >
-                                                Details
-                                            </button>
-                                        )}
+                                        {/* All statuses: Show Details button */}
+                                        <button
+                                            onClick={() => handleOpenDetail(payroll)}
+                                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                                        >
+                                            Details
+                                        </button>
 
                                         {/* Draft/Create: Show Submit button */}
                                         {(payroll.status === 'create' || (!payroll.status && payroll.flag === 0)) && (
