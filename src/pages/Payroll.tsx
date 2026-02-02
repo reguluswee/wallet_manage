@@ -503,7 +503,8 @@ const PayrollPage = () => {
                                                         await checkPayrollStatus(payroll.id);
                                                         toast.success('Status check initiated. Please refresh shortly.');
                                                     } catch (err: any) {
-                                                        toast.error(err.response?.data?.msg || 'Failed to check status');
+                                                        const msg = err.response?.data?.msg || err.message || 'Failed to check status';
+                                                        toast.error(msg);
                                                     }
                                                 }}
                                                 className="inline-flex items-center px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100"
